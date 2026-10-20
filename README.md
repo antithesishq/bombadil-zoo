@@ -3,6 +3,8 @@
 Fuzz harnesses for terminal UIs, using [Bombadil](https://github.com/antithesishq/bombadil)'s
 property-based terminal testing. Everything runs through Nix.
 
+See [Bugs found](BUGS.md) for findings, upstream PRs, and fixes carried locally.
+
 | Harness | Target | Runs |
 | --- | --- | --- |
 | [`atuin`](harnesses/atuin) | [atuin](https://github.com/atuinsh/atuin)'s interactive search, over a seeded history database | in the Nix sandbox |
