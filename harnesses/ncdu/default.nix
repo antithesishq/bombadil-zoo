@@ -24,7 +24,5 @@ in
 zoo.sandboxed {
   name = "ncdu";
   inherit launch;
-}
-// {
-  devShell = pkgs.mkShell { packages = [ pkgs.ncdu ]; };
+  devShell.packages = [ pkgs.ncdu ];
 }

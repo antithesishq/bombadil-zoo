@@ -47,7 +47,5 @@ zoo.sandboxed {
     unzip
     zip
   ];
-}
-// {
-  devShell = pkgs.mkShell { packages = [ pkgs.superfile ]; };
+  devShell.packages = [ pkgs.superfile ];
 }

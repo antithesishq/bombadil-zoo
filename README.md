@@ -154,9 +154,11 @@ copy of any state the target changes, and send stderr to
 spec sees crash messages on screen. For targets that work on files,
 `zoo.launchInCopy { name, seed, command, prepare, env }` does all of that:
 it starts `command` in a fresh copy of the `seed` derivation, after running
-`prepare` there for entries a store path can't hold, like FIFOs. Add
-`packages` for the target build and a `devShell` with its tools by merging
-them into the runner's result.
+`prepare` there for entries a store path can't hold, like FIFOs. Both runners
+accept `devShell`, an attribute set passed to `pkgs.mkShell`: for example,
+`devShell.packages = [ pkgs.ncdu ];`. Custom `shellHook`s go in that same
+attribute set. Add `packages` for target builds by merging them into the
+runner's result.
 
 `spec.ts` uses `lib/spec/common.ts`: `noCrashText` for the target's crash
 messages, `neverStuckBlank`, `keys` and `resize` for actions, and

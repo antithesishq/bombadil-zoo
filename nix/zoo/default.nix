@@ -11,11 +11,20 @@
 # the spec sees crash messages. zoo.launchInCopy builds such a script for
 # targets that work on a copy of some seed state. Either runner gives the
 # harness fuzz-<name> and reproduce-<name> apps that write results to
-# .state/<name>/.
+# .state/<name>/. Both accept `devShell`, an attribute set passed to mkShell.
 { pkgs, bombadil }:
 let
   scripts = import ./scripts.nix { inherit pkgs; };
-  runner = path: import path { inherit pkgs bombadil scripts; };
+  runner =
+    path:
+    {
+      devShell ? { },
+      ...
+    }@args:
+    import path { inherit pkgs bombadil scripts; } (builtins.removeAttrs args [ "devShell" ])
+    // {
+      devShell = pkgs.mkShell devShell;
+    };
 in
 {
   sandboxed = runner ./sandboxed.nix;

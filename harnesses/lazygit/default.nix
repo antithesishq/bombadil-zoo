@@ -50,7 +50,5 @@ zoo.sandboxed {
   # lazygit reports errors it doesn't expect through log.Fatalf, behind a
   # timestamp, then exits.
   crashLines = "An error occurred! Please create an issue|^panic: |^fatal error: ";
-}
-// {
-  devShell = pkgs.mkShell { packages = [ pkgs.lazygit ]; };
+  devShell.packages = [ pkgs.lazygit ];
 }

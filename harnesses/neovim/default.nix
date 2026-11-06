@@ -26,7 +26,5 @@ zoo.sandboxed {
   name = "neovim";
   inherit launch;
   inputs = [ pkgs.coreutils ];
-}
-// {
-  devShell = pkgs.mkShell { packages = [ pkgs.neovim ]; };
+  devShell.packages = [ pkgs.neovim ];
 }

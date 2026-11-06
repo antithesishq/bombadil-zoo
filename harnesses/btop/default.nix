@@ -24,7 +24,5 @@ in
 zoo.sandboxed {
   name = "btop";
   inherit launch;
-}
-// {
-  devShell = pkgs.mkShell { packages = [ pkgs.btop ]; };
+  devShell.packages = [ pkgs.btop ];
 }

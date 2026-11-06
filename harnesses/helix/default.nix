@@ -25,7 +25,5 @@ zoo.sandboxed {
   name = "helix";
   inherit launch;
   inputs = [ pkgs.coreutils ];
-}
-// {
-  devShell = pkgs.mkShell { packages = [ pkgs.helix ]; };
+  devShell.packages = [ pkgs.helix ];
 }

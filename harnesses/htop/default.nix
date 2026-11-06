@@ -33,7 +33,9 @@ let
     (exec -a "😀 ünïcödé 日本語のとても長いコマンドライン 한국어 café" "bin/😀😀😀" -c "$wait_on") &
     # Combining accents (U+0301, U+0308), as bytes so the line stays ASCII.
     (exec -a $'cafe\xcc\x81 nai\xcc\x88ve' ${bash} -c "$wait_on") &
-    (exec -a "sleeper${pkgs.lib.concatStrings (pkgs.lib.genList (i: " --option-${toString i}=value") 40)}" ${bash} -c "$wait_on") &
+    (exec -a "sleeper${
+      pkgs.lib.concatStrings (pkgs.lib.genList (i: " --option-${toString i}=value") 40)
+    }" ${bash} -c "$wait_on") &
     ${bash} -c '${sleep} 1d & ${sleep} 2d & wait' &
     exec ${pkgs.htop}/bin/htop
   '';
@@ -59,7 +61,5 @@ zoo.sandboxed {
     pkgs.strace
     pkgs.lsof
   ];
-}
-// {
-  devShell = pkgs.mkShell { packages = [ pkgs.htop ]; };
+  devShell.packages = [ pkgs.htop ];
 }

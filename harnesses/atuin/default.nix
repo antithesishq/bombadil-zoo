@@ -99,9 +99,8 @@ in
 zoo.sandboxed {
   name = "atuin";
   inherit launch;
+  devShell.packages = [ pkgs.atuin ];
 }
 // {
   packages.atuin-seed = seed;
-
-  devShell = pkgs.mkShell { packages = [ pkgs.atuin ]; };
 }

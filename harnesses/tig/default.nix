@@ -27,7 +27,5 @@ zoo.sandboxed {
   name = "tig";
   inherit launch;
   inputs = [ pkgs.git ];
-}
-// {
-  devShell = pkgs.mkShell { packages = [ pkgs.tig ]; };
+  devShell.packages = [ pkgs.tig ];
 }

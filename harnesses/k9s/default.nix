@@ -94,14 +94,7 @@ zoo.host {
     ${kubectl} wait --for condition=established --timeout=60s crd/widgets.fuzz.example.com >/dev/null
     ${kubectl} apply -f ${./widgets.yaml} >/dev/null
   '';
-}
-// {
-  packages = {
-    inherit k9s;
-    k9s-upstream = pkgs.k9s;
-  };
-
-  devShell = pkgs.mkShell {
+  devShell = {
     packages = [
       k9s
       pkgs.kind
@@ -111,5 +104,11 @@ zoo.host {
       state="$PWD/.state/k9s"
       ${isolate}
     '';
+  };
+}
+// {
+  packages = {
+    inherit k9s;
+    k9s-upstream = pkgs.k9s;
   };
 }

@@ -38,12 +38,11 @@ zoo.sandboxed {
     ripgrep
     fzf
   ];
+  devShell.packages = [ yazi ];
 }
 // {
   packages = {
     inherit yazi;
     yazi-upstream = pkgs.yazi;
   };
-
-  devShell = pkgs.mkShell { packages = [ yazi ]; };
 }

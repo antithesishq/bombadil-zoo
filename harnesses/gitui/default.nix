@@ -26,7 +26,5 @@ zoo.sandboxed {
   name = "gitui";
   inherit launch;
   inputs = [ pkgs.git ];
-}
-// {
-  devShell = pkgs.mkShell { packages = [ pkgs.gitui ]; };
+  devShell.packages = [ pkgs.gitui ];
 }
