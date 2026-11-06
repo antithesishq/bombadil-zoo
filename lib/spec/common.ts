@@ -15,13 +15,11 @@ export const screen = extract((state) => {
     rows.push(state.grid.rowText(i));
   }
   return rows.join("\n");
-}).named("screen");
+});
 
-const size = extract((state) => state.grid.size).named("size");
+const size = extract((state) => state.grid.size);
 
-export const exited = extract((state) => state.exitStatus !== null).named(
-  "exited",
-);
+export const exited = extract((state) => state.exitStatus !== null);
 
 // Fails once the screen shows text matching `crash`. Harnesses copy the
 // target's stderr to the terminal, so a panic message shows up here.
@@ -39,15 +37,10 @@ export function noCrashText(crash: RegExp): Formula {
 export function startsShowing(text: RegExp): Formula {
   return eventually(
     () => !!exited.current || text.test(screen.current ?? ""),
-  ).within(
-    5,
-    "seconds",
-  );
+  ).within(5, "seconds");
 }
 
-const exitSignal = extract(
-  (state) => state.exitStatus?.signal ?? null,
-).named("exitSignal");
+const exitSignal = extract((state) => state.exitStatus?.signal ?? null);
 
 // The target never dies from a signal, e.g. SIGSEGV or SIGABRT. Useful for
 // targets that exit with a nonzero code on purpose, where exitSuccess would

@@ -34,7 +34,7 @@ export const startsUp = startsShowing(/#include <stdio\.h>/);
 // wedged. The bound has to fit well inside a run (10s by default), or the
 // property can never fail. In a narrow terminal the status line drops the
 // mode, so below 60 columns this holds trivially.
-const width = extract((state) => state.grid.size.columns).named("width");
+const width = extract((state) => state.grid.size.columns);
 
 export const statusLineReturns: Formula = always(
   eventually(

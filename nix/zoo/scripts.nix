@@ -122,16 +122,18 @@ rec {
     root="$(${pkgs.git}/bin/git rev-parse --show-toplevel 2>/dev/null || pwd)"
   '';
 
-  # Shell: given a trace at <campaign>/runs/<id>/trace.jsonl(.zst) in $1,
-  # sets $snapshot to the spec tree that campaign kept, or to "" if it has
-  # none.
-  findSnapshot = ''
-    snapshot="$(${coreutils}/dirname "$(${coreutils}/dirname "$(${coreutils}/dirname "$1")")")/spec"
+  # Shell: consumes the trace argument in $1, resolves it to $trace, and
+  # finds the spec kept at <campaign>/spec beside runs/<id>/trace.jsonl(.zst).
+  # Sets $snapshot to "" when no saved spec exists; leaves any options in $@.
+  resolveTrace = ''
+    trace="$(${coreutils}/realpath "$1")"
+    shift
+    snapshot="$(${coreutils}/dirname "$(${coreutils}/dirname "$(${coreutils}/dirname "$trace")")")/spec"
     [ -d "$snapshot" ] || snapshot=""
   '';
 
-  # bombadil always runs 8 workers, so the only way to cap the cores a
-  # campaign uses is CPU affinity, which the target processes inherit.
+  # --parallelism controls Bombadil's workers (default 1). CPU affinity
+  # separately limits which cores they and their target processes use.
   # `pin cpus` prefixes a command with taskset for a list like "0-3", or with
   # nothing for "". The apps take the list from $ZOO_CPUS.
   pin = cpus: lib.optionalString (cpus != "") "${pkgs.util-linux}/bin/taskset --cpu-list ${cpus} ";

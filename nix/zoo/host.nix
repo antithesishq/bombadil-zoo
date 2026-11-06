@@ -19,7 +19,7 @@
 }:
 let
   inherit (pkgs) lib;
-  inherit (scripts) finalize report;
+  inherit (scripts) finalize report specIn;
 
   # Sets up the target and a fresh run directory under .state/<name>/<$1>.
   prelude = ''
@@ -52,7 +52,7 @@ let
       ${scripts.pinShell}
       status=0
       "''${pinned[@]}" ${bombadil.default}/bin/bombadil terminal fuzz \
-        --specification "$run/spec/harnesses/${name}/spec.ts" \
+        --specification "${specIn name "$run/spec"}" \
         --output-path "$run" \
         "$@" \
         -- ${launch} "$run" 2>&1 | tee "$run/bombadil.log" || status=$?
@@ -68,15 +68,13 @@ let
         echo "usage: reproduce-${name} <trace.jsonl or trace.jsonl.zst>" >&2
         exit 1
       fi
-      trace="$(realpath "$1")"
-      set -- "$trace"
-      ${scripts.findSnapshot}
+      ${scripts.resolveTrace}
       set -- reproductions
       ${prelude}
-      spec="$snapshot/harnesses/${name}/spec.ts"
+      spec="${specIn name "$snapshot"}"
       if [ -z "$snapshot" ]; then
         echo "reproduce-${name}: no spec snapshot, using the current spec" >&2
-        spec="$root/harnesses/${name}/spec.ts"
+        spec="${specIn name "$root"}"
       fi
       set -- "$trace" "$run/input.jsonl"
       ${scripts.unpackTrace}

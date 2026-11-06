@@ -22,14 +22,17 @@ property-based terminal testing. Everything runs through Nix.
 
 ```sh
 nix run .#fuzz-yazi                                         # 5 minute campaign
-nix run .#fuzz-yazi -- --time-limit-fuzz 30m --swarm        # arguments go to bombadil
+nix run .#fuzz-yazi -- --time-limit-fuzz 30m --parallelism 4 --swarm
 nix run .#reproduce-yazi -- .state/yazi/runs/<ts>/runs/17/trace.jsonl.zst
+nix run .#shrink-yazi -- .state/yazi/runs/<ts>/runs/17/trace.jsonl.zst --time-limit 2m
 nix flake check                                             # specs, builds, smoke campaigns
 ```
 
-bombadil always runs 8 workers. To run several campaigns at once, give each
-its own CPUs: `ZOO_CPUS=4-7 nix run .#fuzz-yazi` pins the campaign, and the
-target processes it starts, to CPUs 4 to 7.
+Terminal campaigns default to **one worker**. Use `--parallelism N` to change
+the number of workers. CPU affinity is separate: for example,
+`ZOO_CPUS=4-7 nix run .#fuzz-yazi -- --parallelism 4` pins the campaign and its
+target processes to CPUs 4 to 7. Only parallelize targets whose state is isolated;
+the host-run k9s harness shares its cluster.
 
 Every harness has `fuzz-<name>` and `reproduce-<name>`. Results go to
 `.state/<name>/runs/<timestamp>/`:
@@ -48,6 +51,55 @@ failing runs keep theirs. Replays need the spec a trace was recorded with,
 which is why every campaign keeps a copy.
 
 `nix run .# -- <args>` runs Bombadil itself.
+
+## Bombadil controls
+
+The pinned release is 0.7.10. Terminal fuzz apps forward their arguments to
+`bombadil terminal fuzz`; useful controls include:
+
+| Option | Purpose / default |
+| --- | --- |
+| `--time-limit-fuzz 30m` | Campaign budget; default 5m |
+| `--time-limit-run 20s` | Per-run budget; default 10s |
+| `--parallelism 4` | Concurrent workers; default 1 |
+| `--swarm` | Vary the enabled action categories between runs |
+| `--columns 120 --rows 40` | Initial terminal size; default 100×40 |
+| `--scrollback-lines-max 200` | Retained scrollback; default 100 lines |
+| `--quiescence-timeout-ms 20` | Wait longer for terminal output to settle; default 5ms, at a throughput cost |
+
+Do not use `--exit-on-violation` to stop a native fuzz campaign: Bombadil accepts
+but ignores it in fuzz mode. Fuzzing can exit successfully despite violations;
+read `violations` and `bombadil.log`, not just the exit status. There is no public
+random-seed option. The runner's Nix `seed` parameter only makes a distinct build;
+it does not make random exploration deterministic.
+
+### Minimize a terminal failure
+
+Every **sandboxed terminal** harness provides `shrink-<name>`. It decompresses the
+input, uses the campaign's saved spec when available, and runs native
+`terminal shrink` inside the same Nix sandbox with a fresh target per trial.
+Options after the trace go to Bombadil: use `--property NAME` when multiple
+properties failed, `--time-limit 2m` to bound the search, and `--parallelism N`
+only for isolated trials. Calibration defaults to 3 runs and confirmation to
+at most 5 (`--calibration-runs`, `--confirmation-runs-max`).
+
+Results go to `.state/<name>/shrinks/<timestamp>/`: `bombadil.log` contains the
+action-count reduction and reproduction counts; `status` records whether
+shrinking succeeded. The counterexample remains a failure, not a passing test.
+The minimized trace is `runs/0/trace.jsonl`; replay it with `reproduce-<name>`.
+The result also keeps `spec/`, so another shrink uses the same specification.
+Reproduction and shrinking are experimental and cannot repair a flaky trace.
+
+There is no shrink wrapper for k9s: native shrinking creates many sessions
+without resetting its shared backend between trials.
+
+Use `nix run .# -- terminal --help` or `browser --help` to explore all commands;
+each subcommand has its own `--help`. Browser-only controls include `--allow-url`,
+`--header`, `--cookie`, instrumentation, permissions and virtual time. They are
+separate from the terminal controls. Save the same settings for replay to keep
+comparisons valid. The browser inspector supports
+`--no-open --port N`, but binds all network interfaces; do not expose traces or
+fixture credentials on an untrusted network.
 
 ## Layout
 

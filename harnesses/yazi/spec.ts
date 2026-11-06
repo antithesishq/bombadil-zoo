@@ -43,7 +43,7 @@ export const startsUp = startsShowing(/\b(NOR|SEL|UNS)\b/);
 const statusBar = extract((state) => {
   const rows = state.grid.size.rows;
   return rows > 0 ? state.grid.rowText(rows - 1) : "";
-}).named("statusBar");
+});
 
 export const statusBarReturns: Formula = always(
   eventually(

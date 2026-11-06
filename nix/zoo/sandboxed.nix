@@ -61,28 +61,35 @@ let
       ${finish}
     '';
 
-  # Replays a trace in the sandbox. Traces can contain anything the fuzzer
-  # typed, so they never run on the host. specTree is the spec the trace was
-  # recorded with, which may differ from the current one.
-  reproduce =
+  # Replay and shrinking both execute recorded input, so keep both in the
+  # sandbox. Each trial launches a fresh target through the harness's launch
+  # script. specTree is the spec the trace was recorded with.
+  replayRun =
+    command:
     {
       trace,
       seed ? "0",
       cpus ? "",
       specTree ? scripts.specTreeOf name,
+      args ? [ ],
     }:
-    pkgs.runCommand "${name}-reproduce-${seed}" { nativeBuildInputs = inputs; } ''
+    pkgs.runCommand "${name}-${command}-${seed}" { nativeBuildInputs = inputs; } ''
       ${env}
+      cp -r ${specTree} "$out/spec"
       set -- ${trace} "$TMPDIR/trace.jsonl"
       ${scripts.unpackTrace}
       status=0
-      ${scripts.pin cpus}${bombadil.default}/bin/bombadil terminal test \
+      ${scripts.pin cpus}${bombadil.default}/bin/bombadil terminal ${command} \
         --specification ${specIn name specTree} \
-        --reproduce "$TMPDIR/trace.jsonl" \
-        --output-path "$out/run" \
+        --${if command == "shrink" then "trace" else "reproduce"} "$TMPDIR/trace.jsonl" \
+        --output-path "$out/${if command == "shrink" then "runs/0" else "run"}" \
+        ${lib.escapeShellArgs args} \
         -- ${launch} "$out" > "$out/bombadil.log" 2>&1 || status=$?
-      ${finish}
+      ${if command == "shrink" then ''echo "$status" > "$out/status"'' else finish}
     '';
+
+  reproduce = replayRun "test";
+  shrink = replayRun "shrink";
 
   # An app that builds a campaign or replay from the working tree's flake and
   # copies the result into .state. Plain nix from PATH on purpose: the
@@ -98,7 +105,14 @@ let
       text = ''
         ${scripts.findRoot}
         ts="$(date +%Y%m%d-%H%M%S)"
-        dest="$root/.state/${name}/${if kind == "fuzz" then "runs" else "reproductions"}/$ts"
+        dest="$root/.state/${name}/${
+          if kind == "fuzz" then
+            "runs"
+          else if kind == "shrink" then
+            "shrinks"
+          else
+            "reproductions"
+        }/$ts"
         campaigns="(builtins.getFlake \"git+file://$root\").legacyPackages.${pkgs.stdenv.hostPlatform.system}.campaigns.${name}"
 
         echo "${kind}-${name}: building in the Nix sandbox" >&2
@@ -107,7 +121,16 @@ let
         mkdir -p "$dest"
         cp -r "$out"/. "$dest"
         chmod -R u+w "$dest"
-        ${report}/bin/zoo-report "$dest" "${kind}-${name}"
+        ${
+          if kind == "shrink" then
+            ''
+              cat "$dest/bombadil.log"
+              echo "shrink-${name}: results in $dest" >&2
+              exit "$(cat "$dest/status")"
+            ''
+          else
+            ''${report}/bin/zoo-report "$dest" "${kind}-${name}"''
+        }
       '';
     };
 
@@ -118,29 +141,41 @@ let
       --expr "{ seed, args, cpus }: $campaigns.run { inherit seed cpus; args = builtins.fromJSON args; }")"
   '';
 
-  replay = app "reproduce" ''
-    if [ $# -ne 1 ]; then
-      echo "usage: reproduce-${name} <trace.jsonl or trace.jsonl.zst>" >&2
-      exit 1
-    fi
-    trace="$(realpath "$1")"
-    set -- "$trace"
-    ${scripts.findSnapshot}
-    if [ -n "$snapshot" ]; then
-      echo "reproduce-${name}: using the campaign's spec in $snapshot" >&2
-    else
-      echo "reproduce-${name}: no spec snapshot, using the current spec" >&2
-    fi
-    out="$(nix build --impure --no-link --print-out-paths -L \
-      --argstr seed "$ts" --argstr trace "$trace" --argstr snapshot "$snapshot" \
-      --argstr cpus "''${ZOO_CPUS:-}" \
-      --expr "{ seed, trace, snapshot, cpus }: $campaigns.reproduce ({
-        inherit seed cpus;
-        trace = builtins.path { path = trace; name = baseNameOf trace; };
-      } // (if snapshot == \"\" then { } else {
-        specTree = builtins.path { path = snapshot; name = \"spec\"; };
-      }))")"
-  '';
+  traceApp =
+    kind:
+    let
+      usage =
+        "usage: ${kind}-${name} <trace.jsonl or trace.jsonl.zst>"
+        + lib.optionalString (kind == "shrink") " [shrink options]";
+    in
+    app kind ''
+      if [ "''${1:-}" = --help ]; then
+        echo ${lib.escapeShellArg usage}
+        ${bombadil.default}/bin/bombadil terminal ${if kind == "shrink" then "shrink" else "test"} --help
+        exit 0
+      fi
+      if [ $# ${if kind == "reproduce" then "-ne" else "-lt"} 1 ]; then
+        echo ${lib.escapeShellArg usage} >&2
+        exit 1
+      fi
+      ${scripts.resolveTrace}
+      args="$(jq -nc '$ARGS.positional' --args -- "$@")"
+      if [ -n "$snapshot" ]; then
+        echo "${kind}-${name}: using the campaign's spec in $snapshot" >&2
+      else
+        echo "${kind}-${name}: no spec snapshot, using the current spec" >&2
+      fi
+      out="$(nix build --impure --no-link --print-out-paths -L \
+        --argstr seed "$ts" --argstr trace "$trace" --argstr snapshot "$snapshot" \
+        --argstr cpus "''${ZOO_CPUS:-}" --argstr args "$args" \
+        --expr "{ seed, trace, snapshot, cpus, args }: $campaigns.${kind} ({
+          inherit seed cpus;
+          args = builtins.fromJSON args;
+          trace = builtins.path { path = trace; name = baseNameOf trace; };
+        } // (if snapshot == \"\" then { } else {
+          specTree = builtins.path { path = snapshot; name = \"spec\"; };
+        }))")"
+    '';
 
   # Proves the spec loads and the target starts in the sandbox. Fails only if
   # bombadil itself errors; violations are fine here.
@@ -163,8 +198,9 @@ in
 {
   apps = {
     "fuzz-${name}" = scripts.app fuzz;
-    "reproduce-${name}" = scripts.app replay;
+    "reproduce-${name}" = scripts.app (traceApp "reproduce");
+    "shrink-${name}" = scripts.app (traceApp "shrink");
   };
-  legacyPackages.campaigns.${name} = { inherit run reproduce; };
+  legacyPackages.campaigns.${name} = { inherit run reproduce shrink; };
   checks."smoke-${name}" = smoke;
 }
