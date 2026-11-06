@@ -1,13 +1,14 @@
 # bombadil-zoo
 
-Fuzz harnesses for terminal UIs, using [Bombadil](https://github.com/antithesishq/bombadil)'s
-property-based terminal testing. Everything runs through Nix.
+Fuzz harnesses for terminal and browser UIs, using [Bombadil](https://github.com/antithesishq/bombadil)'s
+property-based testing. Everything runs through Nix.
 
 | Harness | Target | Runs |
 | --- | --- | --- |
 | [`atuin`](harnesses/atuin) | [atuin](https://github.com/atuinsh/atuin)'s interactive search, over a seeded history database | in the Nix sandbox |
 | [`btop`](harnesses/btop) | [btop](https://github.com/aristocratos/btop), in a PID namespace of its own | in the Nix sandbox |
 | [`gitui`](harnesses/gitui) | [gitui](https://github.com/gitui-org/gitui), in a fresh copy of the shared git repository | in the Nix sandbox |
+| [`headplane`](harnesses/headplane) | [Headplane](https://github.com/tale/headplane), against a seeded Headscale instance | in a disposable NixOS VM (Linux/KVM) |
 | [`helix`](harnesses/helix) | [Helix](https://github.com/helix-editor/helix), on the shared source files | in the Nix sandbox |
 | [`htop`](harnesses/htop) | [htop](https://github.com/htop-dev/htop), in a PID namespace of its own | in the Nix sandbox |
 | [`k9s`](harnesses/k9s) | [k9s](https://github.com/derailed/k9s), against a throwaway kind cluster | on the host |
@@ -34,7 +35,11 @@ the number of workers. CPU affinity is separate: for example,
 target processes to CPUs 4 to 7. Only parallelize targets whose state is isolated;
 the host-run k9s harness shares its cluster.
 
-Every harness has `fuzz-<name>` and `reproduce-<name>`. Results go to
+Headplane runs one browser worker inside its own VM. Its arguments, fixture reset,
+replay directory and artifacts differ from the terminal harnesses; see
+[its instructions](harnesses/headplane/README.md).
+
+Every harness has `fuzz-<name>` and `reproduce-<name>`. Terminal results go to
 `.state/<name>/runs/<timestamp>/`:
 
 ```
@@ -90,14 +95,16 @@ The minimized trace is `runs/0/trace.jsonl`; replay it with `reproduce-<name>`.
 The result also keeps `spec/`, so another shrink uses the same specification.
 Reproduction and shrinking are experimental and cannot repair a flaky trace.
 
-There is no shrink wrapper for k9s: native shrinking creates many sessions
-without resetting its shared backend between trials.
+There is no shrink wrapper for k9s or Headplane: native shrinking creates many
+sessions without resetting a shared backend between trials. In particular,
+Headplane must keep its VM snapshot/reset loop rather than switch to native
+`browser fuzz` just because that command is now visible in `--help`.
 
 Use `nix run .# -- terminal --help` or `browser --help` to explore all commands;
 each subcommand has its own `--help`. Browser-only controls include `--allow-url`,
 `--header`, `--cookie`, instrumentation, permissions and virtual time. They are
-separate from the terminal controls. Save the same settings for replay to keep
-comparisons valid. The browser inspector supports
+not forwarded by the Headplane runner: changing them without saving the same
+settings for replay would invalidate comparisons. The browser inspector supports
 `--no-open --port N`, but binds all network interfaces; do not expose traces or
 fixture credentials on an untrusted network.
 

@@ -20,6 +20,11 @@ in
 {
   sandboxed = runner ./sandboxed.nix;
   host = runner ./host.nix;
-  inherit (scripts) teeStderr launchInCopy defaultCrashLines;
+  inherit (scripts)
+    app
+    teeStderr
+    launchInCopy
+    defaultCrashLines
+    ;
   seeds = import ./seeds.nix { inherit pkgs; };
 }

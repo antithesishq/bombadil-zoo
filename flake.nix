@@ -1,5 +1,5 @@
 {
-  description = "Property-based fuzzing of terminal UIs with Bombadil";
+  description = "Property-based fuzzing of terminal and browser UIs with Bombadil";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
