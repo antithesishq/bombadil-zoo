@@ -80,7 +80,7 @@ else
         fi
         trace="$(realpath "$1")"
         campaign="$(dirname "$(dirname "$trace")")"
-        test -f "$trace/trace.jsonl"
+        test -f "$trace/trace.bin"
         test -f "$campaign/fixture.tar"
         driver="$(cat "$campaign/driver")"
         test -x "$driver"

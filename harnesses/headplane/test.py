@@ -125,7 +125,7 @@ try:
             "--headless",
             "--no-sandbox",
             "--output-path",
-            output,
+            f"{output}/trace.bin",
             "--width",
             str(viewport["width"]),
             "--height",
@@ -133,9 +133,9 @@ try:
         ]
         if "replay" in request:
             machine.copy_from_host(
-                str(Path(request["replay"]) / "trace.jsonl"), "/tmp/replay/trace.jsonl"
+                str(Path(request["replay"]) / "trace.bin"), "/tmp/replay.bin"
             )
-            args += ["--reproduce", "/tmp/replay"]
+            args += ["--reproduce", "/tmp/replay.bin"]
         else:
             seconds = min(
                 options.time_limit_run, max(1, int(deadline - time.monotonic()))

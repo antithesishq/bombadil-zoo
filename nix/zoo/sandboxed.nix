@@ -55,7 +55,7 @@ let
       status=0
       ${scripts.pin cpus}${bombadil.default}/bin/bombadil terminal fuzz \
         --specification ${specIn name specTree} \
-        --output-path "$out" \
+        --output-path "$out/trace.bin" \
         ${lib.escapeShellArgs args} \
         -- ${launch} "$out" > "$out/bombadil.log" 2>&1 || status=$?
       ${finish}
@@ -76,13 +76,13 @@ let
     pkgs.runCommand "${name}-${command}-${seed}" { nativeBuildInputs = inputs; } ''
       ${env}
       cp -r ${specTree} "$out/spec"
-      set -- ${trace} "$TMPDIR/trace.jsonl"
+      set -- ${trace} "$TMPDIR/trace.bin"
       ${scripts.unpackTrace}
       status=0
       ${scripts.pin cpus}${bombadil.default}/bin/bombadil terminal ${command} \
         --specification ${specIn name specTree} \
-        --${if command == "shrink" then "trace" else "reproduce"} "$TMPDIR/trace.jsonl" \
-        --output-path "$out/${if command == "shrink" then "runs/0" else "run"}" \
+        --${if command == "shrink" then "trace" else "reproduce"} "$TMPDIR/trace.bin" \
+        --output-path "$out/trace.bin" \
         ${lib.escapeShellArgs args} \
         -- ${launch} "$out" > "$out/bombadil.log" 2>&1 || status=$?
       ${if command == "shrink" then ''echo "$status" > "$out/status"'' else finish}
@@ -145,7 +145,7 @@ let
     kind:
     let
       usage =
-        "usage: ${kind}-${name} <trace.jsonl or trace.jsonl.zst>"
+        "usage: ${kind}-${name} <trace.bin or trace.bin.zst>"
         + lib.optionalString (kind == "shrink") " [shrink options]";
     in
     app kind ''

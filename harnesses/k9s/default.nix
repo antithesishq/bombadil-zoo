@@ -25,14 +25,14 @@ let
   # yet, so fuzzing doesn't keep rediscovering the same crashes. Drop a
   # patch once its fix lands, and bump rev to pick it up.
   k9s = pkgs.k9s.overrideAttrs (old: {
-    version = "0.51.0-unstable-2026-10-14";
+    version = "0.51.0-unstable-2026-11-06";
     src = pkgs.fetchFromGitHub {
       owner = "derailed";
       repo = "k9s";
-      rev = "24a0dfa2e4078bed6aa1b4896a602aea70500779";
-      hash = "sha256-c0hsQVWA+g6t+LDU79Bfd0minA6mO1/QKZAjz7t2gGM=";
+      rev = "423fff9c371d751b8d2928f56d37fba6fb8ebc50";
+      hash = "sha256-WiED1ybmOJzf4MphDPP02AyUo6l2TOtxy6NRFxZN9Zo=";
     };
-    vendorHash = "sha256-o3okhVFaJPsspmfZ6u5P0kEjUqsrwCfQnzDvaBQfKq4=";
+    vendorHash = "sha256-3MVuybkrw1ykd0tLf5BQeUEz0eiNJS/Glm2PjXh8kXc=";
     patches = [
       ./patches/k9s/0001-cmdbuff-listener-race.patch
       ./patches/k9s/0002-table-no-api-version.patch

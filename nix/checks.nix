@@ -12,14 +12,38 @@ let
     export const type = typeFromSet(CharSet.fromLiterals("a", "x"));
   '';
   shrinkInput = pkgs.runCommand "shrink-input" { } ''
-    mkdir -p "$out/runs/0"
+    mkdir -p "$out"
     cp -r ${shrinkSpec} "$out/spec"
-    {
-      for i in $(seq 1 8); do
-        echo '{"action":{"TypeText":{"text":"a"}},"violations":[]}'
-      done
-      echo '{"action":{"TypeText":{"text":"x"}},"violations":[{"name":"neverBroken"}]}'
-    } | ${pkgs.zstd}/bin/zstd -q > "$out/runs/0/trace.jsonl.zst"
+    # Binary trace v1: terminal envelope, nine metadata records, end record.
+    ${pkgs.python3}/bin/python - <<'PY' | ${pkgs.zstd}/bin/zstd -q > "$out/trace.bin.zst"
+    import json
+    import struct
+    import sys
+    import zlib
+
+    def checked(data):
+        return data + struct.pack("<I", zlib.crc32(data))
+
+    def record(tag, payload):
+        sys.stdout.buffer.write(checked(struct.pack("<HHI", tag, 0, len(payload))))
+        sys.stdout.buffer.write(struct.pack("<I", zlib.crc32(payload)) + payload)
+
+    sys.stdout.buffer.write(checked(struct.pack("<8sHH", b"BMBDTRC\0", 1, 1)))
+    for i, key in enumerate("aaaaaaaax"):
+        record(1, json.dumps({
+            "timestamp": i,
+            "action": {"TypeText": {"text": key}},
+            "state": {"scroll_offset": 0, "exit_status": None, "cursor": {
+                "position": {"column": 0, "row": 0}, "visible": True,
+                "blinking": False, "visual_style": "Block", "color": "None"
+            }},
+            "snapshots": [],
+            "violations": [{"name": "neverBroken", "violation": {"False": {
+                "time": i, "condition": "!broken.current", "snapshots": []
+            }}}] if key == "x" else []
+        }).encode())
+    record(5, b"")
+    PY
   '';
   shrinkHarness = (import ./zoo { inherit pkgs bombadil; }).sandboxed {
     name = "ncdu";
@@ -31,7 +55,7 @@ let
     '';
   };
   shrunk = shrinkHarness.legacyPackages.campaigns.ncdu.shrink {
-    trace = "${shrinkInput}/runs/0/trace.jsonl.zst";
+    trace = "${shrinkInput}/trace.bin.zst";
     specTree = shrinkSpec;
     args = [
       "--property"
@@ -50,9 +74,9 @@ in
   shrink = pkgs.runCommand "shrink-harness" { nativeBuildInputs = [ pkgs.jq ]; } ''
     test "$(cat ${shrunk}/status)" = 0 || { cat ${shrunk}/bombadil.log; exit 1; }
     test -f ${shrunk}/spec/harnesses/ncdu/spec.ts
-    jq -se '([.[] | select(.action != null)] | length) == 1 and
-      any(.[]; any(.violations[]; .name == "neverBroken"))' \
-      ${shrunk}/runs/0/trace.jsonl
+    ${bombadil.default}/bin/bombadil trace --json ${shrunk}/trace.bin \
+      | jq -se '([.[] | select(.metadata.action != null)] | length) == 1 and
+        any(.[]; any(.metadata.violations[]; .name == "neverBroken"))'
     touch "$out"
   '';
 

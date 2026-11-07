@@ -24,8 +24,8 @@ property-based testing. Everything runs through Nix.
 ```sh
 nix run .#fuzz-yazi                                         # 5 minute campaign
 nix run .#fuzz-yazi -- --time-limit-fuzz 30m --parallelism 4 --swarm
-nix run .#reproduce-yazi -- .state/yazi/runs/<ts>/runs/17/trace.jsonl.zst
-nix run .#shrink-yazi -- .state/yazi/runs/<ts>/runs/17/trace.jsonl.zst --time-limit 2m
+nix run .#reproduce-yazi -- .state/yazi/runs/<ts>/trace-17.bin.zst
+nix run .#shrink-yazi -- .state/yazi/runs/<ts>/trace-17.bin.zst --time-limit 2m
 nix flake check                                             # specs, builds, smoke campaigns
 ```
 
@@ -46,7 +46,7 @@ Every harness has `fuzz-<name>` and `reproduce-<name>`. Terminal results go to
 status        bombadil's exit status
 violations    violated properties and their run IDs
 crashes       distinct crash messages from the target's stderr
-runs/<id>/    trace.jsonl.zst, kept only for runs that violated a property
+trace-<id>.bin.zst  binary trace, kept only for runs that violated a property
 stderr/<pid>  the target's stderr, per process
 spec/         the spec the campaign ran with, used by reproduce-<name>
 ```
@@ -59,7 +59,8 @@ which is why every campaign keeps a copy.
 
 ## Bombadil controls
 
-The pinned release is 0.7.10. Terminal fuzz apps forward their arguments to
+Bombadil is pinned to a revision of upstream `main`, including binary traces.
+Terminal fuzz apps forward their arguments to
 `bombadil terminal fuzz`; useful controls include:
 
 | Option | Purpose / default |
@@ -91,9 +92,12 @@ at most 5 (`--calibration-runs`, `--confirmation-runs-max`).
 Results go to `.state/<name>/shrinks/<timestamp>/`: `bombadil.log` contains the
 action-count reduction and reproduction counts; `status` records whether
 shrinking succeeded. The counterexample remains a failure, not a passing test.
-The minimized trace is `runs/0/trace.jsonl`; replay it with `reproduce-<name>`.
+The minimized trace is `trace.bin`; replay it with `reproduce-<name>`.
 The result also keeps `spec/`, so another shrink uses the same specification.
 Reproduction and shrinking are experimental and cannot repair a flaky trace.
+
+Inspect binary traces with `bombadil trace <file> --json` or `--screen`.
+Decompress `.zst` files first. Old JSONL traces are not compatible with this pin.
 
 There is no shrink wrapper for k9s or Headplane: native shrinking creates many
 sessions without resetting a shared backend between trials. In particular,

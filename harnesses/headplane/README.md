@@ -71,7 +71,7 @@ artifacts/
   users.png            persisted smoke-test mutation
   bombadil-<id>.log    actions and property/error diagnostics
   services-<id>.log    Headplane and Headscale journals
-  runs/<id>/           trace.jsonl, screenshots/, viewport.json, status
+  runs/<id>/           trace.bin (with embedded screenshots), viewport.json, status
 ```
 
 All runs are retained, not just failures, so successful traces can also be
@@ -93,5 +93,5 @@ different control. A saved fixture does not guarantee every trace can replay.
 To inspect a trace interactively:
 
 ```sh
-nix run .# -- browser inspect .state/headplane/fuzz-<timestamp>-<suffix>/artifacts/runs/0
+nix run .# -- browser inspect .state/headplane/fuzz-<timestamp>-<suffix>/artifacts/runs/0/trace.bin
 ```

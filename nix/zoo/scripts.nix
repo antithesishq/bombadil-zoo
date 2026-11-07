@@ -58,12 +58,14 @@ rec {
         | sort -u >> "$out/violations" || true
 
       keep="$(cut -d: -f2 "$out/violations" | tr ',' '\n' | tr -d ' ' | sort -un)"
-      for dir in "$out"/runs/*/; do
-        [ -d "$dir" ] || continue
-        if grep -qx "$(basename "$dir")" <<< "$keep"; then
-          [ -f "$dir/trace.jsonl" ] && zstd -q --rm "$dir/trace.jsonl"
+      for trace in "$out"/trace-*.bin; do
+        [ -f "$trace" ] || continue
+        id="''${trace##*/trace-}"
+        id="''${id%.bin}"
+        if grep -qx "$id" <<< "$keep"; then
+          zstd -q --rm "$trace"
         else
-          rm -rf "$dir"
+          rm "$trace"
         fi
       done
 
@@ -109,7 +111,7 @@ rec {
     '';
   };
 
-  # Shell: writes the trace $1, given as trace.jsonl or trace.jsonl.zst, to $2.
+  # Shell: writes the trace $1, given as trace.bin or trace.bin.zst, to $2.
   unpackTrace = ''
     case "$1" in
       *.zst) ${pkgs.zstd}/bin/zstd -dcq "$1" > "$2" ;;
@@ -123,12 +125,12 @@ rec {
   '';
 
   # Shell: consumes the trace argument in $1, resolves it to $trace, and
-  # finds the spec kept at <campaign>/spec beside runs/<id>/trace.jsonl(.zst).
+  # finds the spec kept at <campaign>/spec beside trace-<id>.bin(.zst).
   # Sets $snapshot to "" when no saved spec exists; leaves any options in $@.
   resolveTrace = ''
     trace="$(${coreutils}/realpath "$1")"
     shift
-    snapshot="$(${coreutils}/dirname "$(${coreutils}/dirname "$(${coreutils}/dirname "$trace")")")/spec"
+    snapshot="$(${coreutils}/dirname "$trace")/spec"
     [ -d "$snapshot" ] || snapshot=""
   '';
 

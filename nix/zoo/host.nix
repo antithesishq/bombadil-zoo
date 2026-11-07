@@ -53,7 +53,7 @@ let
       status=0
       "''${pinned[@]}" ${bombadil.default}/bin/bombadil terminal fuzz \
         --specification "${specIn name "$run/spec"}" \
-        --output-path "$run" \
+        --output-path "$run/trace.bin" \
         "$@" \
         -- ${launch} "$run" 2>&1 | tee "$run/bombadil.log" || status=$?
       ${finish "fuzz"}
@@ -65,7 +65,7 @@ let
     runtimeInputs = [ pkgs.coreutils ];
     text = ''
       if [ $# -ne 1 ]; then
-        echo "usage: reproduce-${name} <trace.jsonl or trace.jsonl.zst>" >&2
+        echo "usage: reproduce-${name} <trace.bin or trace.bin.zst>" >&2
         exit 1
       fi
       ${scripts.resolveTrace}
@@ -76,14 +76,14 @@ let
         echo "reproduce-${name}: no spec snapshot, using the current spec" >&2
         spec="${specIn name "$root"}"
       fi
-      set -- "$trace" "$run/input.jsonl"
+      set -- "$trace" "$run/input.bin"
       ${scripts.unpackTrace}
       ${scripts.pinShell}
       status=0
       "''${pinned[@]}" ${bombadil.default}/bin/bombadil terminal test \
         --specification "$spec" \
-        --reproduce "$run/input.jsonl" \
-        --output-path "$run/run" \
+        --reproduce "$run/input.bin" \
+        --output-path "$run/trace.bin" \
         -- ${launch} "$run" 2>&1 | tee "$run/bombadil.log" || status=$?
       ${finish "reproduce"}
     '';
