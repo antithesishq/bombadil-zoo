@@ -3,10 +3,12 @@
 # A harness's default.nix takes { pkgs, bombadil, zoo } and returns packages,
 # apps, a devShell and optionally checks and legacyPackages, mostly via
 # zoo.sandboxed or zoo.host.
+# Additional named arguments are resolved from the flake inputs.
 {
   pkgs,
   bombadil,
   zoo,
+  inputs,
 }:
 let
   inherit (pkgs) lib;
@@ -16,7 +18,7 @@ let
   );
 
   harnesses = lib.genAttrs names (
-    name: import (../harnesses + "/${name}") { inherit pkgs bombadil zoo; }
+    name: lib.callPackageWith (inputs // { inherit pkgs bombadil zoo; }) (../harnesses + "/${name}") { }
   );
 
   merge = attr: lib.concatMapAttrs (_: h: h.${attr} or { }) harnesses;

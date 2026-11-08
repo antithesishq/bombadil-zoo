@@ -28,8 +28,9 @@ rec {
 
   # finalize <run dir> <crash regex>: summarizes a finished campaign into
   # `violations` and `crashes`, and keeps zstd-compressed traces only for
-  # runs that violated a property. A full campaign's traces run to hundreds
-  # of gigabytes.
+  # failures. External launchers prefix stderr files with BOMBADIL_RUN_ID so a
+  # crash without a property violation still retains the matching trace. A full
+  # campaign's traces run to hundreds of gigabytes.
   finalize = pkgs.writeShellApplication {
     name = "zoo-finalize";
     runtimeInputs = with pkgs; [
@@ -57,7 +58,22 @@ rec {
       grep -oE '^[A-Za-z]+ was violated' "$out/bombadil.log" \
         | sort -u >> "$out/violations" || true
 
-      keep="$(cut -d: -f2 "$out/violations" | tr ',' '\n' | tr -d ' ' | sort -un)"
+      # The distinct crash messages, most frequent first.
+      cat "$out"/stderr/* 2>/dev/null \
+        | grep -E "$crash_lines" \
+        | sed -E -e 's/^thread .* panicked at /panicked at /' -e 's/^thread [0-9]+ panic: /panic: /' \
+        | sort | uniq -c | sort -rn > "$out/crashes" || true
+
+      violation_keep="$(cut -d: -f2 "$out/violations" | tr ',' '\n' | tr -d ' ')"
+      crash_keep="$(
+        for log in "$out"/stderr/*; do
+          [ -f "$log" ] || continue
+          if grep -Eq "$crash_lines" "$log"; then
+            printf '%s\n' "''${log##*/}"
+          fi
+        done | sed -n 's/^\([0-9][0-9]*\)-.*$/\1/p'
+      )"
+      keep="$(printf '%s\n%s\n' "$violation_keep" "$crash_keep" | sed '/^$/d' | sort -un)"
       for trace in "$out"/trace-*.bin; do
         [ -f "$trace" ] || continue
         id="''${trace##*/trace-}"
@@ -68,12 +84,6 @@ rec {
           rm "$trace"
         fi
       done
-
-      # The distinct crash messages, most frequent first.
-      cat "$out"/stderr/* 2>/dev/null \
-        | grep -E "$crash_lines" \
-        | sed -E -e 's/^thread .* panicked at /panicked at /' -e 's/^thread [0-9]+ panic: /panic: /' \
-        | sort | uniq -c | sort -rn > "$out/crashes" || true
     '';
   };
 
@@ -158,7 +168,7 @@ rec {
   # The shell part of a launch script: copies stderr to a file per process
   # under the run directory $1, and to the terminal so the spec sees crash
   # messages.
-  teeStderr = ''2> >(${coreutils}/tee "$1/stderr/$$" >&2)'';
+  teeStderr = ''2> >(${coreutils}/tee "$1/stderr/''${BOMBADIL_RUN_ID:-unknown}-$$" >&2)'';
 
   # Runs its arguments after the first with the directory in $1 hidden
   # behind an empty tmpfs, in user and mount namespaces of their own, as the

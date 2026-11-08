@@ -1,5 +1,9 @@
 # Checks that aren't specific to one harness.
-{ pkgs, bombadil }:
+{
+  pkgs,
+  bombadil,
+  externalNpmPackage,
+}:
 let
   inherit (pkgs) lib;
   shrinkSpec = pkgs.writeTextDir "harnesses/ncdu/spec.ts" ''
@@ -80,6 +84,34 @@ in
     touch "$out"
   '';
 
+  # Crash-only external failures retain their replay traces too. Use synthetic
+  # stderr and traces to exercise finalization without starting a target.
+  crashRetention =
+    let
+      finalize = (import ./zoo/scripts.nix { inherit pkgs; }).finalize;
+    in
+    pkgs.runCommand "crash-retention" { } ''
+      result="$TMPDIR/result"
+      mkdir -p "$result/stderr"
+      printf 'validGeometry: 1, 4\n' > "$result/bombadil.log"
+      for id in 0 1 2 3 4; do
+        printf 'trace %s\n' "$id" > "$result/trace-$id.bin"
+      done
+      printf 'ordinary warning\n' > "$result/stderr/0-100"
+      printf 'thread 9 panicked at synthetic.rs:1:1\n' > "$result/stderr/2-102"
+      ${finalize}/bin/zoo-finalize "$result" 'panicked at |^panic: |^fatal error: '
+      test -f "$result/trace-1.bin.zst"
+      test -f "$result/trace-2.bin.zst"
+      test -f "$result/trace-4.bin.zst"
+      test ! -e "$result/trace-0.bin"
+      test ! -e "$result/trace-0.bin.zst"
+      test ! -e "$result/trace-3.bin"
+      test ! -e "$result/trace-3.bin.zst"
+      grep -qx 'validGeometry: 1, 4' "$result/violations"
+      grep -q 'panicked at synthetic.rs:1:1' "$result/crashes"
+      touch "$out"
+    '';
+
   # Type-checks the shared spec helpers and every harness's spec against the
   # Bombadil package's type definitions.
   specs =
@@ -98,7 +130,10 @@ in
         cp -r $src/. . && chmod -R u+w .
         mkdir -p node_modules/@antithesishq
         ln -s ${bombadil.npm-package} node_modules/@antithesishq/bombadil
-        ${pkgs.typescript}/bin/tsc -p tsconfig.json
+        ${pkgs.jq}/bin/jq --arg external '${externalNpmPackage}/dist/external/index.d.ts' \
+          '.compilerOptions.paths = {"@antithesishq/bombadil/external": [$external]}' \
+          tsconfig.json > tsconfig.check.json
+        ${pkgs.typescript}/bin/tsc -p tsconfig.check.json
         touch $out
       '';
 }

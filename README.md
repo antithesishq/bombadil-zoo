@@ -1,6 +1,6 @@
 # bombadil-zoo
 
-Fuzz harnesses for terminal and browser UIs, using [Bombadil](https://github.com/antithesishq/bombadil)'s
+Fuzz harnesses for terminal, browser and Rune UIs, using [Bombadil](https://github.com/antithesishq/bombadil)'s
 property-based testing. Everything runs through Nix.
 
 | Harness | Target | Runs |
@@ -15,6 +15,7 @@ property-based testing. Everything runs through Nix.
 | [`lazygit`](harnesses/lazygit) | [lazygit](https://github.com/jesseduffield/lazygit), in a fresh seed repository | in the Nix sandbox |
 | [`ncdu`](harnesses/ncdu) | [ncdu](https://dev.yorhel.nl/ncdu), scanning a fresh copy of the shared file tree | in the Nix sandbox |
 | [`neovim`](harnesses/neovim) | [Neovim](https://github.com/neovim/neovim), `nvim --clean` on a seed of source and text files | in the Nix sandbox |
+| [`rex-rune`](harnesses/rex-rune) | [Rex Linux](https://github.com/shuv1337/rex-rune), against a private Rex server through the in-process Rune driver | in the Nix sandbox (x86_64 Linux) |
 | [`superfile`](harnesses/superfile) | [superfile](https://github.com/yorukot/superfile), in a fresh copy of the shared file tree | in the Nix sandbox |
 | [`tig`](harnesses/tig) | [tig](https://github.com/jonas/tig), in a fresh copy of the shared git repository | in the Nix sandbox |
 | [`yazi`](harnesses/yazi) | [yazi](https://github.com/sxyazi/yazi), in a fresh seed directory tree | in the Nix sandbox |
@@ -39,6 +40,11 @@ Headplane runs one browser worker inside its own VM. Its arguments, fixture rese
 replay directory and artifacts differ from the terminal harnesses; see
 [its instructions](harnesses/headplane/README.md).
 
+The [Rex Rune example](harnesses/rex-rune/README.md) uses a separate pinned
+`bombadil-drivers` input and experimental external engine. It requires a
+host-installed Rex binary; follow its setup instructions before running
+`nix run .#fuzz-rex-rune`. Existing terminal/browser engine pins are unchanged.
+
 Every harness has `fuzz-<name>` and `reproduce-<name>`. Terminal results go to
 `.state/<name>/runs/<timestamp>/`:
 
@@ -46,8 +52,8 @@ Every harness has `fuzz-<name>` and `reproduce-<name>`. Terminal results go to
 status        bombadil's exit status
 violations    violated properties and their run IDs
 crashes       distinct crash messages from the target's stderr
-trace-<id>.bin.zst  binary trace, kept only for runs that violated a property
-stderr/<pid>  the target's stderr, per process
+trace-<id>.bin.zst  binary trace, kept for property violations and identified crashes
+stderr/<run-id>-<pid>  the target's stderr, per process
 spec/         the spec the campaign ran with, used by reproduce-<name>
 ```
 

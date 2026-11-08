@@ -5,6 +5,9 @@
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     # Deliberately not following our nixpkgs, so builds hit bombadil.cachix.org.
     bombadil.url = "github:antithesishq/bombadil";
+    bombadil-external.url = "github:antithesishq/bombadil/6ee18c40bb9183d3ef707037cd89f7f771d761e8";
+    bombadil-drivers.url = "github:antithesishq/bombadil-drivers/354f7df06d557a4ca9dd72cbf89facbce2366db4";
+    rex-rune.url = "github:shuv1337/rex-rune";
   };
 
   nixConfig = {
@@ -15,7 +18,7 @@
   };
 
   outputs =
-    { nixpkgs, bombadil, ... }:
+    inputs@{ nixpkgs, bombadil, ... }:
     let
       systems = [
         "x86_64-linux"
@@ -38,7 +41,7 @@
           inherit pkgs;
           bombadil = bombadil';
           harnesses = import ./nix/harnesses.nix {
-            inherit pkgs zoo;
+            inherit pkgs zoo inputs;
             bombadil = bombadil';
           };
         };
@@ -76,7 +79,13 @@
           bombadil,
           harnesses,
         }:
-        import ./nix/checks.nix { inherit pkgs bombadil; } // harnesses.packages // harnesses.checks
+        import ./nix/checks.nix {
+          inherit pkgs bombadil;
+          externalNpmPackage =
+            inputs.bombadil-external.packages.${pkgs.stdenv.hostPlatform.system}.npm-package;
+        }
+        // harnesses.packages
+        // harnesses.checks
       );
 
       devShells = perSystem (

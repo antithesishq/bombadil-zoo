@@ -4,6 +4,9 @@
 #   name        the harness directory under harnesses/
 #   launch      script: launch <run dir>
 #   inputs      extra tools on PATH during the campaign
+#   interface   terminal (default) or external
+#   engine      Bombadil package (defaults to the shared engine)
+#   localOnly   disable remote builders for host-provided dependencies
 #   crashLines  regex for crash lines on stderr
 #   smokeArgs   bombadil arguments for the smoke check
 {
@@ -15,6 +18,9 @@
   name,
   launch,
   inputs ? [ ],
+  interface ? "terminal",
+  engine ? bombadil.default,
+  localOnly ? false,
   crashLines ? scripts.defaultCrashLines,
   smokeArgs ? [
     "--time-limit-fuzz"
@@ -26,6 +32,12 @@
 let
   inherit (pkgs) lib;
   inherit (scripts) finalize report specIn;
+
+  localBuild = lib.optionalAttrs localOnly {
+    preferLocalBuild = true;
+    allowSubstitutes = false;
+  };
+  builderFlags = lib.optionalString localOnly "--builders ''";
 
   env = ''
     export HOME="$TMPDIR/home"
@@ -49,11 +61,11 @@ let
     let
       specTree = scripts.specTreeOf name;
     in
-    pkgs.runCommand "${name}-campaign-${seed}" { nativeBuildInputs = inputs; } ''
+    pkgs.runCommand "${name}-campaign-${seed}" (localBuild // { nativeBuildInputs = inputs; }) ''
       ${env}
       cp -r ${specTree} "$out/spec"
       status=0
-      ${scripts.pin cpus}${bombadil.default}/bin/bombadil terminal fuzz \
+      ${scripts.pin cpus}${engine}/bin/bombadil ${interface} fuzz \
         --specification ${specIn name specTree} \
         --output-path "$out/trace.bin" \
         ${lib.escapeShellArgs args} \
@@ -73,13 +85,13 @@ let
       specTree ? scripts.specTreeOf name,
       args ? [ ],
     }:
-    pkgs.runCommand "${name}-${command}-${seed}" { nativeBuildInputs = inputs; } ''
+    pkgs.runCommand "${name}-${command}-${seed}" (localBuild // { nativeBuildInputs = inputs; }) ''
       ${env}
       cp -r ${specTree} "$out/spec"
       set -- ${trace} "$TMPDIR/trace.bin"
       ${scripts.unpackTrace}
       status=0
-      ${scripts.pin cpus}${bombadil.default}/bin/bombadil terminal ${command} \
+      ${scripts.pin cpus}${engine}/bin/bombadil ${interface} ${command} \
         --specification ${specIn name specTree} \
         --${if command == "shrink" then "trace" else "reproduce"} "$TMPDIR/trace.bin" \
         --output-path "$out/trace.bin" \
@@ -136,7 +148,7 @@ let
 
   fuzz = app "fuzz" ''
     args="$(jq -nc '$ARGS.positional' --args -- "$@")"
-    out="$(nix build --impure --no-link --print-out-paths -L \
+    out="$(nix build --impure --no-link --print-out-paths -L ${builderFlags} \
       --argstr seed "$ts" --argstr args "$args" --argstr cpus "''${ZOO_CPUS:-}" \
       --expr "{ seed, args, cpus }: $campaigns.run { inherit seed cpus; args = builtins.fromJSON args; }")"
   '';
@@ -151,7 +163,7 @@ let
     app kind ''
       if [ "''${1:-}" = --help ]; then
         echo ${lib.escapeShellArg usage}
-        ${bombadil.default}/bin/bombadil terminal ${if kind == "shrink" then "shrink" else "test"} --help
+        ${engine}/bin/bombadil ${interface} ${if kind == "shrink" then "shrink" else "test"} --help
         exit 0
       fi
       if [ $# ${if kind == "reproduce" then "-ne" else "-lt"} 1 ]; then
@@ -165,7 +177,7 @@ let
       else
         echo "${kind}-${name}: no spec snapshot, using the current spec" >&2
       fi
-      out="$(nix build --impure --no-link --print-out-paths -L \
+      out="$(nix build --impure --no-link --print-out-paths -L ${builderFlags} \
         --argstr seed "$ts" --argstr trace "$trace" --argstr snapshot "$snapshot" \
         --argstr cpus "''${ZOO_CPUS:-}" --argstr args "$args" \
         --expr "{ seed, trace, snapshot, cpus, args }: $campaigns.${kind} ({
@@ -179,7 +191,7 @@ let
 
   # Proves the spec loads and the target starts in the sandbox. Fails only if
   # bombadil itself errors; violations are fine here.
-  smoke = pkgs.runCommand "${name}-smoke" { } ''
+  smoke = pkgs.runCommand "${name}-smoke" localBuild ''
     campaign=${
       run {
         seed = "smoke";

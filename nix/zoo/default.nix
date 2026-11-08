@@ -11,8 +11,10 @@
 # implementing VM launch, result collection and replay separately.
 #
 # `launch <run dir>` starts one target process. It writes the target's stderr
-# to <run dir>/stderr/<pid> and to the terminal, which zoo.teeStderr does, so
-# the spec sees crash messages. zoo.launchInCopy builds such a script for
+# to <run dir>/stderr/<run-id>-<pid> and to the terminal, which zoo.teeStderr
+# does, so the spec sees crash messages and finalization can retain external
+# crash traces. The run ID is `unknown` for interfaces that do not provide one.
+# zoo.launchInCopy builds such a script for
 # targets that work on a copy of some seed state. Either runner gives the
 # harness fuzz-<name> and reproduce-<name> apps that write results to
 # .state/<name>/. Both accept `devShell`, an attribute set passed to mkShell.

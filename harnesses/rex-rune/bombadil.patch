@@ -1,0 +1,95 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 2ad4e49..5da6b2e 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -531,6 +531,18 @@ dependencies = [
+  "piper",
+ ]
+ 
++[[package]]
++name = "bombadil-rune"
++version = "0.1.0"
++dependencies = [
++ "anyhow",
++ "base64 0.22.1",
++ "png 0.18.1",
++ "rune",
++ "serde",
++ "serde_json",
++]
++
+ [[package]]
+ name = "bumpalo"
+ version = "3.20.3"
+@@ -3068,6 +3080,7 @@ version = "0.7.0"
+ dependencies = [
+  "anyhow",
+  "base64 0.22.1",
++ "bombadil-rune",
+  "clap",
+  "flume",
+  "futures-util",
+diff --git a/Cargo.toml b/Cargo.toml
+index d4dd697..f4ea55c 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -9,8 +9,10 @@ publish = false
+ [features]
+ default = ["ui"]
+ ui = ["dep:rune", "dep:rune-kit", "dep:rune-theme-opencode", "dep:zbus"]
++bombadil = ["ui", "dep:bombadil-rune"]
+ 
+ [dependencies]
++bombadil-rune = { path = "bombadil-driver", optional = true }
+ anyhow = "1"
+ base64 = "0.22"
+ clap = { version = "4", features = ["derive"] }
+diff --git a/src/app/mod.rs b/src/app/mod.rs
+index 7df9bc3..97a61a0 100644
+--- a/src/app/mod.rs
++++ b/src/app/mod.rs
+@@ -269,6 +269,26 @@ pub fn run(mut options: Options) -> anyhow::Result<()> {
+         let mut frames = stats::FrameStats::default();
+         app = app.on_frame_encoded(move |f| frames.record(f));
+     }
++    #[cfg(feature = "bombadil")]
++    if std::env::var_os("REX_BOMBADIL").is_some() {
++        let background = app.handle();
++        let runtime = app.headless_runtime(size, rune::Env::new(true, 1.0));
++        // Real poll hooks run on each frame, but background connections use
++        // wall time. Do not claim that advancing Rune has settled their I/O.
++        let mut driver = bombadil_rune::Driver::new(runtime, move |runtime, _| {
++            background.drain_updates(runtime);
++            false
++        })
++        .with_screenshots()?;
++        let result = driver.run(
++            "rex-rune",
++            std::io::stdin().lock(),
++            std::io::stdout().lock(),
++        );
++        drop(driver);
++        wait_for_hosts_at_exit();
++        return result;
++    }
+     app.run();
+     // The window is gone and the workspace with it: every host connection has been told to shut
+     // down. Give the host threads a moment to drop their transfers, so a download in flight
+diff --git a/vendor/rune/crates/rune/src/app.rs b/vendor/rune/crates/rune/src/app.rs
+--- a/vendor/rune/crates/rune/src/app.rs
++++ b/vendor/rune/crates/rune/src/app.rs
+@@ -762,6 +762,14 @@ impl<S: 'static> AppHandle<S> {
+     pub fn update_if(&self, f: impl FnOnce(&mut S, &mut Tx) -> bool + Send + 'static) {
+         self.request(|q| q.updates.push(Box::new(f)));
+     }
+ 
++    /// Apply queued background updates to a headless runtime. Native event loops
++    /// already drain this queue before drawing their next frame.
++    pub fn drain_updates(&self, runtime: &mut crate::Runtime<S>) {
++        for update in self.shared.take_updates() {
++            runtime.update_if(update);
++        }
++    }
++
+     fn request(&self, f: impl FnOnce(&mut Requests<S>)) {
+         f(&mut self.shared.requests.lock().unwrap());
