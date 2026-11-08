@@ -5,6 +5,10 @@
 #
 #   zoo.sandboxed  the campaign runs as a Nix build (sandboxed.nix)
 #   zoo.host       the campaign runs on your machine (host.nix)
+#   zoo.browserVm  a browser campaign in a disposable offline VM (browser-vm.nix)
+#
+# Browser harnesses provide their target service and smoke/spec files instead of
+# implementing VM launch, result collection and replay separately.
 #
 # `launch <run dir>` starts one target process. It writes the target's stderr
 # to <run dir>/stderr/<pid> and to the terminal, which zoo.teeStderr does, so
@@ -29,6 +33,7 @@ in
 {
   sandboxed = runner ./sandboxed.nix;
   host = runner ./host.nix;
+  browserVm = import ./browser-vm.nix { inherit pkgs bombadil scripts; };
   inherit (scripts)
     app
     teeStderr
