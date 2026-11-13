@@ -176,6 +176,8 @@ messages, `neverStuckBlank`, `keys` and `resize` for actions, and
 followed immediately by another key reads as Alt+key, which makes traces
 replay differently from how they were recorded.
 
-`nix develop` gives a shell with every harness's tools and links the
-Bombadil types into `node_modules/` for editors; `nix develop .#<name>`
-gives just one harness.
+`nix develop` gives a lightweight shell with spec-editing and Nix tools. It
+links the Bombadil types into `node_modules/` for editors, but does not include
+the Bombadil engine or any harness targets. Use `nix develop .#<name>` to add
+one harness's tools. Run campaigns independently with
+`nix run .#fuzz-<name>`; no development shell is required.

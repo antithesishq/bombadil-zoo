@@ -1,5 +1,5 @@
-# Development shells: `default` has every harness's tools, and each harness
-# also gets its own, e.g. `nix develop .#yazi`.
+# The default shell has spec-editing tools only. Harness tools are opt-in,
+# e.g. `nix develop .#yazi`; fuzz campaigns use `nix run .#fuzz-yazi`.
 {
   pkgs,
   bombadil,
@@ -10,8 +10,6 @@ let
 
   base = pkgs.mkShell {
     packages = with pkgs; [
-      bombadil.default
-
       # Writing specs.
       bun
       typescript
@@ -35,6 +33,6 @@ let
   shellWith = shells: pkgs.mkShell { inputsFrom = [ base ] ++ shells; };
 in
 {
-  default = shellWith (lib.mapAttrsToList (_: h: h.devShell) harnesses);
+  default = base;
 }
 // lib.mapAttrs (_: h: shellWith [ h.devShell ]) harnesses
