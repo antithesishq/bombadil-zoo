@@ -6,14 +6,15 @@
         "flake-utils": "flake-utils",
         "hegel": "hegel",
         "nixpkgs": "nixpkgs",
-        "rust-overlay": "rust-overlay"
+        "rust-overlay": "rust-overlay",
+        "zig": "zig"
       },
       "locked": {
-        "lastModified": 1793975228,
-        "narHash": "sha256-KAcf8KglElVogo7RAmjs6wD4dUNhDpwrqyqX+l5gHY4=",
+        "lastModified": 1795040959,
+        "narHash": "sha256-MRshLsTywEFoRD9ovKf7J4WNZy4E2J+aHAyHeAfTap8=",
         "owner": "antithesishq",
         "repo": "bombadil",
-        "rev": "85951425e647b382f29e64ab03d2998f165d3d52",
+        "rev": "499ebaf32086838c6aaf1df193a07e9c8bdf7785",
         "type": "github"
       },
       "original": {
@@ -109,6 +110,22 @@
       }
     },
     "flake-compat_2": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1696426674,
+        "narHash": "sha256-kvjfFW7WAETZlt09AgDn1MrtKzP7t90Vf7vypd3OL1U=",
+        "owner": "edolstra",
+        "repo": "flake-compat",
+        "rev": "0f9255e01c2351cc7d116c072cb317785dd33b33",
+        "type": "github"
+      },
+      "original": {
+        "owner": "edolstra",
+        "repo": "flake-compat",
+        "type": "github"
+      }
+    },
+    "flake-compat_3": {
       "locked": {
         "lastModified": 1733328505,
         "narHash": "sha256-NeCCThCEP3eCl2l/+27kNNK7QrwZB1IJCrXfrbv5oqU=",
@@ -122,7 +139,7 @@
         "url": "https://flakehub.com/f/edolstra/flake-compat/1.tar.gz"
       }
     },
-    "flake-compat_3": {
+    "flake-compat_4": {
       "flake": false,
       "locked": {
         "lastModified": 1696426674,
@@ -158,7 +175,7 @@
     },
     "flake-utils_2": {
       "inputs": {
-        "systems": "systems_2"
+        "systems": "systems_3"
       },
       "locked": {
         "lastModified": 1731533236,
@@ -201,7 +218,7 @@
     },
     "hegel_2": {
       "inputs": {
-        "flake-compat": "flake-compat_2",
+        "flake-compat": "flake-compat_3",
         "nixpkgs": [
           "bombadil-external",
           "nixpkgs"
@@ -307,7 +324,7 @@
     "rex-rune": {
       "inputs": {
         "nixpkgs": "nixpkgs_5",
-        "zig": "zig"
+        "zig": "zig_2"
       },
       "locked": {
         "lastModified": 1794439057,
@@ -390,6 +407,7 @@
       }
     },
     "systems_2": {
+      "flake": false,
       "locked": {
         "lastModified": 1681028828,
         "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
@@ -405,6 +423,21 @@
       }
     },
     "systems_3": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_4": {
       "flake": false,
       "locked": {
         "lastModified": 1681028828,
@@ -422,12 +455,36 @@
     },
     "zig": {
       "inputs": {
-        "flake-compat": "flake-compat_3",
+        "flake-compat": "flake-compat_2",
+        "nixpkgs": [
+          "bombadil",
+          "nixpkgs"
+        ],
+        "systems": "systems_2"
+      },
+      "locked": {
+        "lastModified": 1792585651,
+        "narHash": "sha256-Kg8Qdi6ur+K5hNJwav0pEqdylGd7vXxEPeBvaKW5nxA=",
+        "owner": "mitchellh",
+        "repo": "zig-overlay",
+        "rev": "98819174f1bb7c9961c3ebbb00d19fc4e1c1960d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mitchellh",
+        "repo": "zig-overlay",
+        "rev": "98819174f1bb7c9961c3ebbb00d19fc4e1c1960d",
+        "type": "github"
+      }
+    },
+    "zig_2": {
+      "inputs": {
+        "flake-compat": "flake-compat_4",
         "nixpkgs": [
           "rex-rune",
           "nixpkgs"
         ],
-        "systems": "systems_3"
+        "systems": "systems_4"
       },
       "locked": {
         "lastModified": 1793794620,
