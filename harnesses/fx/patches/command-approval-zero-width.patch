@@ -1,0 +1,46 @@
+diff --git a/src/ui/approval_screen.zig b/src/ui/approval_screen.zig
+index 0e42d31..23e4ea4 100644
+--- a/src/ui/approval_screen.zig
++++ b/src/ui/approval_screen.zig
+@@ -1736,6 +1736,18 @@ test "bounded command approval previews route by complete command fit" {
+     ));
+ }
+
++test "zero-width command approval routes to review screen" {
++    try std.testing.expect(try needsScreen(
++        std.testing.allocator,
++        .{
++            .label = "shell.run printf short",
++            .command = "printf short",
++        },
++        testLayout(150, 1),
++        0,
++    ));
++}
++
+ test "command and file approval screen routing preserves short inline and file review behavior" {
+     try std.testing.expect(!try needsScreen(
+         std.testing.allocator,
+diff --git a/src/ui/footer/surface_frame.zig b/src/ui/footer/surface_frame.zig
+index 71bf4f1..eb783de 100644
+--- a/src/ui/footer/surface_frame.zig
++++ b/src/ui/footer/surface_frame.zig
+@@ -1099,13 +1099,16 @@ pub fn commandApprovalFitsInline(
+     layout: types.Layout,
+     banner_row_count: usize,
+ ) !bool {
+-    const picker_rows = try approval_ui.inlineApprovalPanelRowsForCommand(
++    const picker_rows = approval_ui.inlineApprovalPanelRowsForCommand(
+         alloc,
+         label,
+         command,
+         layout.cols,
+         layout.rows,
+-    );
++    ) catch |err| switch (err) {
++        error.CommandDoesNotFit => return false,
++        else => return err,
++    };
+     const banner_rows: u16 = @intCast(@min(banner_row_count, std.math.maxInt(u16)));
+     const measurement = SurfaceFooterMeasurement{
+         .input_visible = false,
