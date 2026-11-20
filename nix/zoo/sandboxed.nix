@@ -57,10 +57,10 @@ let
       seed ? "0",
       args ? [ ],
       cpus ? "",
+      # Another spec tree laid out like the repository, e.g. a scripted
+      # reproduction, in place of the harness's own spec.
+      specTree ? scripts.specTreeOf name,
     }:
-    let
-      specTree = scripts.specTreeOf name;
-    in
     pkgs.runCommand "${name}-campaign-${seed}" (localBuild // { nativeBuildInputs = inputs; }) ''
       ${env}
       cp -r ${specTree} "$out/spec"
@@ -116,7 +116,8 @@ let
       ];
       text = ''
         ${scripts.findRoot}
-        ts="$(date +%Y%m%d-%H%M%S)"
+        # Keep concurrent invocations in separate Nix builds and result directories.
+        ts="$(date +%Y%m%d-%H%M%S)-$$"
         dest="$root/.state/${name}/${
           if kind == "fuzz" then
             "runs"
@@ -158,7 +159,8 @@ let
     let
       usage =
         "usage: ${kind}-${name} <trace.bin or trace.bin.zst>"
-        + lib.optionalString (kind == "shrink") " [shrink options]";
+        + lib.optionalString (kind == "shrink") " [shrink options]"
+        + lib.optionalString (kind == "reproduce") " [test options]";
     in
     app kind ''
       if [ "''${1:-}" = --help ]; then
@@ -166,7 +168,7 @@ let
         ${engine}/bin/bombadil ${interface} ${if kind == "shrink" then "shrink" else "test"} --help
         exit 0
       fi
-      if [ $# ${if kind == "reproduce" then "-ne" else "-lt"} 1 ]; then
+      if [ $# -lt 1 ]; then
         echo ${lib.escapeShellArg usage} >&2
         exit 1
       fi

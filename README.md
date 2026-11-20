@@ -100,6 +100,9 @@ action-count reduction and reproduction counts; `status` records whether
 shrinking succeeded. The counterexample remains a failure, not a passing test.
 The minimized trace is `trace.bin`; replay it with `reproduce-<name>`.
 The result also keeps `spec/`, so another shrink uses the same specification.
+Sandboxed `reproduce-<name>` accepts `terminal test` options after the trace;
+for timing-sensitive traces, repeat campaign options such as
+`--quiescence-timeout-ms 50` during replay.
 Reproduction and shrinking are experimental and cannot repair a flaky trace.
 
 Inspect binary traces with `bombadil trace <file> --json` or `--screen`.

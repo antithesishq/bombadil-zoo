@@ -17,6 +17,7 @@
   prepare ? null,
   extraPackages ? [ ],
   devShell ? { },
+  cores ? 4,
 }:
 if !pkgs.stdenv.hostPlatform.isLinux then
   { devShell = pkgs.mkShell { }; }
@@ -43,11 +44,10 @@ else
           imports = [
             (import (harness + "/vm.nix") { inherit pkgs bombadil; })
             {
-              # Two vCPUs support the server and two browser workers without
-              # letting a VM consume the host's whole processor budget.
+              # The default supports the server and four browser workers.
               virtualisation = {
                 memorySize = 4096;
-                cores = 2;
+                inherit cores;
                 diskSize = 4096;
                 restrictNetwork = true;
               };

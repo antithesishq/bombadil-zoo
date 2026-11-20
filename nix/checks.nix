@@ -112,6 +112,20 @@ in
       touch "$out"
     '';
 
+  # Exercise the shared OpenAI fixture server through its real HTTP interface.
+  openai-mock = pkgs.runCommand "openai-mock-check" { } ''
+    export PYTHONPATH=${../lib}
+    ${pkgs.python3}/bin/python -m unittest discover -s ${../lib/openai_mock} -v
+    touch "$out"
+  '';
+
+  # Exercise the shared MCP fixture server through its real stdio interface.
+  mcp-mock = pkgs.runCommand "mcp-mock-check" { } ''
+    export PYTHONPATH=${../lib}
+    ${pkgs.python3}/bin/python -m unittest discover -s ${../lib/mcp_mock} -v
+    touch "$out"
+  '';
+
   # Type-checks the shared spec helpers and every harness's spec against the
   # Bombadil package's type definitions.
   specs =
