@@ -1,7 +1,7 @@
 # Gitea browser harness
 
 Fuzzes the real nixpkgs `gitea` server, Chromium and native Bombadil browser
-fuzzing in one disposable NixOS VM. The VM has exactly two virtual cores, uses a
+fuzzing in one disposable NixOS VM. The VM has exactly four virtual cores, uses a
 disposable SQLite database, and requires Linux with `/dev/kvm`.
 
 ```sh
@@ -50,15 +50,12 @@ including after an exploratory logout. The server, database and repositories are
 shared by workers within one VM; actions can mutate them. Separate invocations
 get separate VMs and result paths.
 
-Exploration combines Bombadil's normal clicks, keyboard input, history, reload,
-scrolling and waiting with deterministic navigation to the seeded repository,
-file and commit views, issue list/detail/new forms, and repository settings.
-Issue forms also receive deterministic titles and Markdown/Unicode content;
-native submit clicks exercise real comment and issue creation transitions.
-Navigation uses a temporary link followed by a native click, avoiding a custom
-action whose execution context is destroyed by its own navigation. Auxiliary
-pages without Gitea's navbar recover to the repository instead of waiting for an
-impossible selector. Properties check uncaught JavaScript exceptions, unhandled
+After the fixture login (the only fixed input), exploration uses Bombadil's
+generated clicks, keyboard input, history, reload, scrolling and waiting, plus
+viewports anywhere from 360×640 to 1920×1080. Auxiliary pages without Gitea's
+navbar are left with Back instead of waiting for an impossible selector. The
+smoke check, not the spec, covers exact flows such as committing a file edit.
+Properties check uncaught JavaScript exceptions, unhandled
 promise rejections, origin confinement, UI startup and reload recovery, and
 navigation responses below 500. Expected validation errors and 4xx responses
 are not treated as Gitea failures. This does not provide an oracle for arbitrary
@@ -91,7 +88,10 @@ artifacts/
   server.log           Gitea journal
   repository.png       authenticated seeded-repository smoke capture
   issue.png            seeded issue smoke capture
+  file-editor.png      native CodeMirror edit before commit/persistence check
   settings.png         repository-settings smoke capture
+  settings-mobile.png  settings after resizing to 360×640
+  settings-wide.png    settings after resizing to 1920×1080
 ```
 
 All traces are retained and can consume substantial disk space. Remove old
