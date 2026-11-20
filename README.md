@@ -14,6 +14,7 @@ property-based testing. Everything runs through Nix.
 | [`htop`](harnesses/htop) | [htop](https://github.com/htop-dev/htop), in a PID namespace of its own | in the Nix sandbox |
 | [`k9s`](harnesses/k9s) | [k9s](https://github.com/derailed/k9s), against a throwaway kind cluster | on the host |
 | [`lazygit`](harnesses/lazygit) | [lazygit](https://github.com/jesseduffield/lazygit), in a fresh seed repository | in the Nix sandbox |
+| [`llama-webui`](harnesses/llama-webui) | [llama.cpp WebUI](https://llama.app/docs/webui), with a tiny local model and native browser fuzzing | in a disposable NixOS VM (Linux/KVM) |
 | [`ncdu`](harnesses/ncdu) | [ncdu](https://dev.yorhel.nl/ncdu), scanning a fresh copy of the shared file tree | in the Nix sandbox |
 | [`neovim`](harnesses/neovim) | [Neovim](https://github.com/neovim/neovim), `nvim --clean` on a seed of source and text files | in the Nix sandbox |
 | [`rex-rune`](harnesses/rex-rune) | [Rex Linux](https://github.com/shuv1337/rex-rune), against a private Rex server through the in-process Rune driver | in the Nix sandbox (x86_64 Linux) |
@@ -40,6 +41,10 @@ the host-run k9s harness shares its cluster.
 Headplane runs one browser worker inside its own VM. Its arguments, fixture reset,
 replay directory and artifacts differ from the terminal harnesses; see
 [its instructions](harnesses/headplane/README.md).
+
+The [llama.cpp WebUI harness](harnesses/llama-webui/README.md) uses native
+`browser fuzz` in its VM, supports parallel workers and swarm testing, and retains
+binary browser traces for replay. No GPU or production model is required.
 
 The [Rex Rune example](harnesses/rex-rune/README.md) uses a separate pinned
 `bombadil-drivers` input and experimental external engine. It requires a
