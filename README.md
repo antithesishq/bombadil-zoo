@@ -8,6 +8,7 @@ property-based testing. Everything runs through Nix.
 | [`atuin`](harnesses/atuin) | [atuin](https://github.com/atuinsh/atuin)'s interactive search, over a seeded history database | in the Nix sandbox |
 | [`btop`](harnesses/btop) | [btop](https://github.com/aristocratos/btop), in a PID namespace of its own | in the Nix sandbox |
 | [`gitui`](harnesses/gitui) | [gitui](https://github.com/gitui-org/gitui), in a fresh copy of the shared git repository | in the Nix sandbox |
+| [`grok-build`](harnesses/grok-build) | [Grok Build](https://github.com/xai-org/grok-build) 1.0.77 TUI, against a private mock inference server | in the Nix sandbox |
 | [`headplane`](harnesses/headplane) | [Headplane](https://github.com/tale/headplane), against a seeded Headscale instance | in a disposable NixOS VM (Linux/KVM) |
 | [`helix`](harnesses/helix) | [Helix](https://github.com/helix-editor/helix), on the shared source files | in the Nix sandbox |
 | [`htop`](harnesses/htop) | [htop](https://github.com/htop-dev/htop), in a PID namespace of its own | in the Nix sandbox |
