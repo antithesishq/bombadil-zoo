@@ -2,7 +2,7 @@
 
 Fuzzes the real Web UI served by the pinned nixpkgs `syncthing` package
 (currently 2.1.7). Syncthing, Chromium and Bombadil run inside one disposable
-NixOS VM with **2 virtual cores**. Requires Linux and `/dev/kvm`.
+NixOS VM with **4 virtual cores**. Requires Linux and `/dev/kvm`.
 
 ```sh
 nix run .#fuzz-syncthing
@@ -39,17 +39,14 @@ and folder. Consequently a mutation made by one run can affect later runs;
 parallel invocations of the app use separate VMs and result paths. This is not
 a per-run backend reset mechanism.
 
-The spec waits for rendered dashboard state, then combines Bombadil's normal
-click, input, scroll and navigation generators with bounded actions that expand
-the first folder, resume or rescan it, and open its existing-folder settings.
-The latter visits General, Sharing and File Versioning without saving, leaving
-generic input actions to mutate the fixture's forms. These deliberately cover
-per-folder controls that generic clicking rarely reaches in sequence. Opening
-folder settings is intentional; these actions do not open nested dialogs.
+The spec waits for rendered dashboard state, then uses only Bombadil's generated
+click, input, scroll and navigation actions, plus viewports anywhere from
+360×640 to 1920×1080. Exact flows such as rescanning and saving ignore patterns
+belong to the smoke check.
 
-The spec checks UI startup, reload recovery, origin confinement, uncaught
-exceptions, unhandled promise rejections and navigation HTTP errors. Expected
-settings validation and rejected REST requests are not themselves violations.
+The spec checks UI startup, reload and viewport recovery, origin confinement,
+uncaught exceptions, unhandled promise rejections and navigation HTTP errors.
+Expected settings validation and rejected REST requests are not themselves violations.
 A parallel worker can restart Syncthing while another reloads; Chrome's internal
 `chrome-error://chromewebdata/` page is therefore not treated as remote
 navigation, and the reload-recovery property still requires the UI to return.
@@ -59,7 +56,9 @@ navigation, and the reload-recovery property still requires the UI to return.
 Before fuzzing, the smoke check loads the actual Angular Web UI, verifies the
 seeded folder and three-file local state, clicks **Rescan All** and requires a
 successful scan API response, then opens **Settings**, switches to the GUI tab,
-checks the populated fields and closes the dialog. The Nix smoke check also runs
+checks the populated fields and closes the dialog. It also saves valid ignore
+patterns, verifies their API payload, waits for modal cleanup and confirms that
+they are present after reopening the folder editor. The Nix smoke check also runs
 a short native fuzz campaign and checks that its trace reached a rendered
 dashboard.
 
@@ -80,7 +79,10 @@ artifacts/
   bombadil.log         native fuzz progress and diagnostics
   server.log           Syncthing and configuration-service journals
   dashboard.png        seeded dashboard smoke-test capture
+  dashboard-mobile.png dashboard after resizing to 360×640
+  dashboard-wide.png   dashboard after resizing to 1920×1080
   settings.png         populated GUI-settings smoke-test capture
+  ignores.png          valid ignore patterns before save/reopen verification
 ```
 
 All traces are retained, not only failures. Remove old campaigns and their

@@ -43,4 +43,64 @@ with sync_playwright() as playwright:
     page.screenshot(path="/tmp/artifacts/settings.png", full_page=True)
     settings.locator('button[data-dismiss="modal"]').click()
     expect(settings.locator(".modal-dialog")).not_to_be_visible()
+
+    edit = page.locator('button[ng-click="editFolderExisting(folder)"]')
+    # Use the same programmatic activation as the fuzz action. Lazy panel
+    # visibility is not the behavior this editor persistence check measures.
+    edit.evaluate("element => element.click()")
+    folder_editor = page.locator("#editFolder")
+    expect(folder_editor.locator(".modal-dialog")).to_be_visible()
+    folder_editor.locator('a[href="#folder-ignores"]').click()
+    patterns = folder_editor.locator('textarea[name="ignoresText"]')
+    expect(patterns).to_be_editable()
+    patterns.fill(
+        "// Bombadil fixture\n*.tmp\n.cache/**\n**/backup-??.dat\n文档/**\n"
+    )
+    page.screenshot(path="/tmp/artifacts/ignores.png", full_page=True)
+    patterns.press("Tab")
+    with page.expect_response(
+        lambda response: "/rest/db/ignores?" in response.url
+        and response.request.method == "POST"
+    ) as pending:
+        folder_editor.locator('button[ng-click="saveFolder()"]').click()
+    assert pending.value.ok
+    assert "文档/**" in pending.value.request.post_data
+    assert "**/backup-??.dat" in pending.value.request.post_data
+    expect(folder_editor.locator(".modal-dialog")).not_to_be_visible()
+    page.wait_for_function(
+        "() => { const scope = angular.element(document.querySelector('#editFolder')).scope(); "
+        "return scope && Object.keys(scope.ignores ?? {}).length === 0 "
+        "&& !scope.currentFolder?._editing; }"
+    )
+    saved = page.evaluate(
+        "async () => { const http = angular.element(document.body).injector().get('$http'); "
+        "const response = await http.get('/rest/db/ignores?folder=zoo-sample'); "
+        "return {status: response.status, body: response.data}; }"
+    )
+    print("ignore GET after save:", saved)
+    assert saved["status"] == 200
+    assert "文档/**" in saved["body"].get("ignore", [])
+    assert "**/backup-??.dat" in saved["body"].get("ignore", [])
+    with page.expect_response(
+        lambda response: "/rest/db/ignores?" in response.url
+        and response.request.method == "GET"
+    ) as reopened:
+        edit.evaluate("element => element.click()")
+    print("ignore GET on editor reopen:", reopened.value.json())
+    expect(folder_editor.locator(".modal-dialog")).to_be_visible()
+    folder_editor.locator('a[href="#folder-ignores"]').click()
+    expect(patterns).to_be_editable()
+    expect(patterns).to_have_value(re.compile(r"文档/\*\*"))
+    expect(patterns).to_have_value(re.compile(r"backup-\?\?\.dat"))
+    folder_editor.locator('button[data-dismiss="modal"]').click()
+    expect(folder_editor.locator(".modal-dialog")).not_to_be_visible()
+
+    for width, height, name in [(360, 640, "mobile"), (1920, 1080, "wide")]:
+        page.set_viewport_size({"width": width, "height": height})
+        expect(
+            page.locator("button.panel-heading").filter(has_text="Zoo Samples")
+        ).to_be_visible()
+        page.screenshot(
+            path=f"/tmp/artifacts/dashboard-{name}.png", full_page=True
+        )
     browser.close()
